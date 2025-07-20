@@ -2,6 +2,13 @@ package com.example.demo.controller;
 
 import com.example.demo.model.User;
 import com.example.demo.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +42,7 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/users")
 @CrossOrigin(origins = "*") // Allow CORS for development
+@Tag(name = "User Management", description = "REST API for managing users in the system")
 public class UserController {
     
     private final UserService userService;
@@ -57,6 +65,20 @@ public class UserController {
      * @return a {@link Flux} of all users
      */
     @GetMapping
+    @Operation(
+        summary = "Get all users",
+        description = "Retrieves all users from the system including sample data"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Successfully retrieved all users",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = User.class)
+            )
+        )
+    })
     public Flux<User> getAllUsers() {
         return userService.getAllUsers();
     }
@@ -70,7 +92,27 @@ public class UserController {
      * @return a {@link Mono} with ResponseEntity containing the user or 404 if not found
      */
     @GetMapping("/{id}")
-    public Mono<ResponseEntity<User>> getUserById(@PathVariable String id) {
+    @Operation(
+        summary = "Get user by ID",
+        description = "Retrieves a specific user by their unique identifier"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "User found and returned",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = User.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "User not found with the provided ID"
+        )
+    })
+    public Mono<ResponseEntity<User>> getUserById(
+            @Parameter(description = "Unique identifier of the user", example = "1")
+            @PathVariable String id) {
         return userService.getUserById(id)
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
@@ -85,7 +127,27 @@ public class UserController {
      * @return a {@link Mono} with ResponseEntity containing the user or 404 if not found
      */
     @GetMapping("/email/{email}")
-    public Mono<ResponseEntity<User>> getUserByEmail(@PathVariable String email) {
+    @Operation(
+        summary = "Get user by email",
+        description = "Retrieves a specific user by their email address"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "User found and returned",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = User.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "User not found with the provided email address"
+        )
+    })
+    public Mono<ResponseEntity<User>> getUserByEmail(
+            @Parameter(description = "Email address of the user", example = "john.doe@example.com")
+            @PathVariable String email) {
         return userService.getUserByEmail(email)
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
@@ -100,7 +162,23 @@ public class UserController {
      * @return a {@link Flux} of matching users
      */
     @GetMapping("/search")
-    public Flux<User> searchUsers(@RequestParam String name) {
+    @Operation(
+        summary = "Search users by name",
+        description = "Searches for users whose first or last name contains the provided search term"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Search completed successfully (may return empty list if no matches)",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = User.class)
+            )
+        )
+    })
+    public Flux<User> searchUsers(
+            @Parameter(description = "Search term to match against user names", example = "John")
+            @RequestParam String name) {
         return userService.searchUsersByName(name);
     }
     
@@ -113,7 +191,27 @@ public class UserController {
      * @return a {@link Mono} with ResponseEntity containing the created user or error
      */
     @PostMapping
-    public Mono<ResponseEntity<User>> createUser(@RequestBody UserCreateRequest userRequest) {
+    @Operation(
+        summary = "Create a new user",
+        description = "Creates a new user in the system. Email must be unique."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "201",
+            description = "User created successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = User.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - email already exists or invalid data"
+        )
+    })
+    public Mono<ResponseEntity<User>> createUser(
+            @Parameter(description = "User creation request with firstName, lastName, and email")
+            @RequestBody UserCreateRequest userRequest) {
         return userService.createUser(
                 userRequest.getFirstName(),
                 userRequest.getLastName(),
@@ -134,8 +232,33 @@ public class UserController {
      * @return a {@link Mono} with ResponseEntity containing the updated user or error
      */
     @PutMapping("/{id}")
-    public Mono<ResponseEntity<User>> updateUser(@PathVariable String id, 
-                                                @RequestBody UserUpdateRequest userRequest) {
+    @Operation(
+        summary = "Update an existing user",
+        description = "Updates an existing user's information. Email must be unique if changed."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "User updated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = User.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - email already exists or invalid data"
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "User not found with the provided ID"
+        )
+    })
+    public Mono<ResponseEntity<User>> updateUser(
+            @Parameter(description = "Unique identifier of the user to update", example = "1")
+            @PathVariable String id,
+            @Parameter(description = "User update request with new firstName, lastName, and email")
+            @RequestBody UserUpdateRequest userRequest) {
         return userService.updateUser(
                 id,
                 userRequest.getFirstName(),
@@ -156,7 +279,23 @@ public class UserController {
      * @return a {@link Mono} with ResponseEntity indicating success or failure
      */
     @DeleteMapping("/{id}")
-    public Mono<ResponseEntity<Void>> deleteUser(@PathVariable String id) {
+    @Operation(
+        summary = "Delete a user",
+        description = "Deletes a user from the system by their unique identifier"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "204",
+            description = "User deleted successfully"
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "User not found with the provided ID"
+        )
+    })
+    public Mono<ResponseEntity<Void>> deleteUser(
+            @Parameter(description = "Unique identifier of the user to delete", example = "1")
+            @PathVariable String id) {
         return userService.deleteUser(id)
                 .map(deleted -> {
                     if (Boolean.TRUE.equals(deleted)) {
@@ -175,6 +314,20 @@ public class UserController {
      * @return a {@link Mono} containing the user count
      */
     @GetMapping("/count")
+    @Operation(
+        summary = "Get user count",
+        description = "Returns the total number of users in the system"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Successfully retrieved user count",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = Long.class, example = "5")
+            )
+        )
+    })
     public Mono<Long> getUserCount() {
         return userService.getUserCount();
     }
@@ -188,16 +341,38 @@ public class UserController {
      * @return a {@link Mono} containing true if user exists, false otherwise
      */
     @GetMapping("/{id}/exists")
-    public Mono<Boolean> userExists(@PathVariable String id) {
+    @Operation(
+        summary = "Check if user exists",
+        description = "Checks if a user exists in the system with the provided ID"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Successfully checked user existence",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = Boolean.class, example = "true")
+            )
+        )
+    })
+    public Mono<Boolean> userExists(
+            @Parameter(description = "Unique identifier of the user to check", example = "1")
+            @PathVariable String id) {
         return userService.userExists(id);
     }
     
     /**
      * Request DTO for creating a new user.
      */
+    @Schema(description = "Request payload for creating a new user")
     public static class UserCreateRequest {
+        @Schema(description = "User's first name", example = "John")
         private String firstName;
+        
+        @Schema(description = "User's last name", example = "Doe")
         private String lastName;
+        
+        @Schema(description = "User's email address (must be unique)", example = "john.doe@example.com")
         private String email;
         
         // Default constructor for Jackson
@@ -237,9 +412,15 @@ public class UserController {
     /**
      * Request DTO for updating an existing user.
      */
+    @Schema(description = "Request payload for updating an existing user")
     public static class UserUpdateRequest {
+        @Schema(description = "User's first name", example = "Jane")
         private String firstName;
+        
+        @Schema(description = "User's last name", example = "Smith")
         private String lastName;
+        
+        @Schema(description = "User's email address (must be unique)", example = "jane.smith@example.com")
         private String email;
         
         // Default constructor for Jackson

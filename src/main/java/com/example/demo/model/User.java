@@ -2,6 +2,7 @@ package com.example.demo.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -25,24 +26,31 @@ import java.util.Objects;
  * @version 1.0
  * @since 1.0
  */
+@Schema(description = "User entity representing a system user with personal information and audit timestamps")
 public class User {
     
     /** Unique identifier for the user */
+    @Schema(description = "Unique identifier for the user", example = "123e4567-e89b-12d3-a456-426614174000")
     private final String id;
     
     /** User's first name */
+    @Schema(description = "User's first name", example = "John")
     private final String firstName;
     
     /** User's last name */
+    @Schema(description = "User's last name", example = "Doe")
     private final String lastName;
     
     /** User's email address */
+    @Schema(description = "User's email address (must be unique in the system)", example = "john.doe@example.com")
     private final String email;
     
     /** Timestamp when the user was created */
+    @Schema(description = "Timestamp when the user was created", example = "2023-12-01T10:30:00")
     private final LocalDateTime createdAt;
     
     /** Timestamp when the user was last updated */
+    @Schema(description = "Timestamp when the user was last updated", example = "2023-12-01T15:45:30")
     private final LocalDateTime updatedAt;
     
     /**
