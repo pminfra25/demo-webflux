@@ -1,4 +1,4 @@
-# Spring Boot WebFlux User Management System
+# Spring Boot WebFlux Demo
 
 A complete reactive user management system built with Spring Boot WebFlux, demonstrating modern reactive programming patterns and comprehensive testing practices.
 
