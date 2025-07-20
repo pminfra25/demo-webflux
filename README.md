@@ -12,6 +12,10 @@ A complete reactive user management system built with Spring Boot WebFlux, demon
 - **Comprehensive Testing**: 50+ unit and integration tests
 - **RESTful API**: Clean REST endpoints with proper HTTP status codes
 - **Sample Data**: Pre-loaded test data for quick demonstration
+- **🔍 Comprehensive Audit Logging**: Structured logging for all business operations
+- **📊 Performance Monitoring**: Method execution timing and performance metrics
+- **🔒 Security Auditing**: Track all user operations with detailed context
+- **📋 Swagger Documentation**: Interactive API documentation with OpenAPI 3.0
 
 ## 🏗️ Architecture
 
@@ -128,6 +132,66 @@ The application comes pre-loaded with sample users:
 - **Reactive Testing**: StepVerifier (Project Reactor)
 - **Documentation**: Comprehensive Javadoc
 
+## 📋 Audit Logging & Monitoring
+
+The application includes comprehensive audit logging and performance monitoring capabilities:
+
+### 🔍 Audit Logging Features
+
+- **Structured Logging**: All operations logged in a consistent, parseable format
+- **Business Operations**: Create, Read, Update, Delete, Search operations tracked
+- **Security Events**: Failed login attempts, duplicate email detection, invalid operations
+- **Performance Metrics**: Method execution times and reactive stream performance
+- **Error Tracking**: Detailed error context and stack traces
+- **Method Tracing**: Entry/exit logging for debugging and performance analysis
+
+### 📊 Log Format
+
+```
+[AUDIT] [TIMESTAMP] [OPERATION] [USER_ID] [DETAILS] [STATUS]
+```
+
+**Example Audit Logs:**
+```
+[AUDIT] [2023-12-01 10:30:15.123] [CREATE_USER] [123e4567-e89b-12d3-a456-426614174000] [User created: John Doe (john.doe@example.com)] [SUCCESS]
+[AUDIT] [2023-12-01 10:31:22.456] [READ_USER] [123e4567-e89b-12d3-a456-426614174000] [User retrieved using method: BY_ID] [SUCCESS]
+[AUDIT] [2023-12-01 10:32:05.789] [CREATE_USER] [N/A] [User creation failed for email: duplicate@example.com - Reason: Email already exists] [FAILED]
+```
+
+### ⚡ Performance Monitoring
+
+- **Reactive Stream Timing**: Accurate timing for Mono and Flux operations
+- **HTTP Request Tracking**: Complete request/response cycle monitoring
+- **Method Performance**: Individual method execution time tracking
+- **Resource Usage**: Memory and processing time metrics
+
+### 🔧 Logging Configuration
+
+Configure logging levels in `application.properties`:
+
+```properties
+# Audit logging level
+logging.level.com.example.demo.logging.AuditLogger=INFO
+
+# Performance monitoring
+logging.level.com.example.demo.logging.PerformanceLoggingAspect=DEBUG
+
+# File logging for audit trail
+logging.file.name=logs/demo-webflux.log
+logging.file.max-size=10MB
+logging.file.max-history=30
+```
+
+### 📝 Sample Audit Events
+
+| Operation | Logged Events |
+|-----------|---------------|
+| **User Creation** | Method entry, validation checks, success/failure, method exit |
+| **User Retrieval** | Method entry, database query, found/not found, method exit |
+| **User Update** | Method entry, validation, changes tracked, success/failure, method exit |
+| **User Deletion** | Method entry, existence check, deletion result, method exit |
+| **Search Operations** | Method entry, search terms, result count, method exit |
+
 ## 🏛️ Project Structure
 
 ```
@@ -135,8 +199,13 @@ src/
 ├── main/
 │   ├── java/com/example/demo/
 │   │   ├── DemoWebfluxApplication.java
-│   │   ├── config/ApplicationConfig.java
+│   │   ├── config/
+│   │   │   ├── ApplicationConfig.java
+│   │   │   └── SwaggerConfig.java
 │   │   ├── controller/UserController.java
+│   │   ├── logging/
+│   │   │   ├── AuditLogger.java
+│   │   │   └── PerformanceLoggingAspect.java
 │   │   ├── model/User.java
 │   │   ├── repository/
 │   │   │   ├── UserRepository.java
@@ -148,6 +217,7 @@ src/
         ├── DemoWebfluxApplicationIntegrationTest.java
         ├── DemoWebfluxApplicationTests.java
         ├── controller/UserControllerTest.java
+        ├── logging/AuditLoggerTest.java
         ├── model/UserTest.java
         ├── repository/impl/InMemoryUserRepositoryTest.java
         └── service/UserServiceTest.java

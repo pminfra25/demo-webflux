@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.logging.AuditLogger;
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +8,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.UUID;
 
 /**
@@ -31,16 +33,21 @@ import java.util.UUID;
 @Service
 public class UserService {
     
+    private static final String CLASS_NAME = "UserService";
+    
     private final UserRepository userRepository;
+    private final AuditLogger auditLogger;
     
     /**
      * Constructor for dependency injection.
      * 
      * @param userRepository the user repository to be injected
+     * @param auditLogger the audit logger for tracking operations
      */
     @Autowired
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, AuditLogger auditLogger) {
         this.userRepository = userRepository;
+        this.auditLogger = auditLogger;
     }
     
     /**
@@ -56,14 +63,27 @@ public class UserService {
      * @throws IllegalArgumentException if email already exists
      */
     public Mono<User> createUser(String firstName, String lastName, String email) {
+        long startTime = System.currentTimeMillis();
+        auditLogger.logMethodEntry(CLASS_NAME, "createUser", firstName, lastName, email);
+        
         return userRepository.existsByEmail(email)
                 .flatMap(exists -> {
                     if (Boolean.TRUE.equals(exists)) {
+                        auditLogger.logDuplicateEmail(email, AuditLogger.OP_CREATE);
                         return Mono.error(new IllegalArgumentException("Email already exists: " + email));
                     }
                     String id = UUID.randomUUID().toString();
                     User newUser = new User(id, firstName, lastName, email);
                     return userRepository.save(newUser);
+                })
+                .doOnSuccess(user -> {
+                    auditLogger.logUserCreated(user);
+                    auditLogger.logMethodExit(CLASS_NAME, "createUser", System.currentTimeMillis() - startTime);
+                })
+                .doOnError(error -> {
+                    auditLogger.logUserCreationFailed(email, error.getMessage());
+                    auditLogger.logError(AuditLogger.OP_CREATE, error, 
+                        String.format("Failed to create user: %s %s (%s)", firstName, lastName, email));
                 });
     }
     
@@ -74,7 +94,24 @@ public class UserService {
      * @return a {@link Mono} emitting the user if found, or empty if not found
      */
     public Mono<User> getUserById(String id) {
-        return userRepository.findById(id);
+        long startTime = System.currentTimeMillis();
+        auditLogger.logMethodEntry(CLASS_NAME, "getUserById", id);
+        
+        return userRepository.findById(id)
+                .doOnNext(user -> {
+                    auditLogger.logUserRetrieved(user.getId(), "BY_ID");
+                    auditLogger.logMethodExit(CLASS_NAME, "getUserById", System.currentTimeMillis() - startTime);
+                })
+                .doOnTerminate(() -> {
+                    // This will be called whether the Mono is empty or has a value
+                    if (System.currentTimeMillis() - startTime > 0) { // Only log if we haven't logged yet
+                        auditLogger.logMethodExit(CLASS_NAME, "getUserById", System.currentTimeMillis() - startTime);
+                    }
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    auditLogger.logUserNotFound(id, "BY_ID");
+                    return Mono.empty();
+                }));
     }
     
     /**
@@ -93,7 +130,16 @@ public class UserService {
      * @return a {@link Flux} emitting all users
      */
     public Flux<User> getAllUsers() {
-        return userRepository.findAll();
+        long startTime = System.currentTimeMillis();
+        auditLogger.logMethodEntry(CLASS_NAME, "getAllUsers");
+        
+        return userRepository.findAll()
+                .collectList()
+                .doOnNext(users -> {
+                    auditLogger.logListAllUsers(users.size());
+                    auditLogger.logMethodExit(CLASS_NAME, "getAllUsers", System.currentTimeMillis() - startTime);
+                })
+                .flatMapMany(Flux::fromIterable);
     }
     
     /**
@@ -103,7 +149,16 @@ public class UserService {
      * @return a {@link Flux} emitting matching users
      */
     public Flux<User> searchUsersByName(String searchTerm) {
-        return userRepository.findByNameContaining(searchTerm);
+        long startTime = System.currentTimeMillis();
+        auditLogger.logMethodEntry(CLASS_NAME, "searchUsersByName", searchTerm);
+        
+        return userRepository.findByNameContaining(searchTerm)
+                .collectList()
+                .doOnNext(users -> {
+                    auditLogger.logUserSearch(searchTerm, users.size());
+                    auditLogger.logMethodExit(CLASS_NAME, "searchUsersByName", System.currentTimeMillis() - startTime);
+                })
+                .flatMapMany(Flux::fromIterable);
     }
     
     /**
@@ -148,6 +203,9 @@ public class UserService {
      * @return a {@link Mono} emitting {@code true} if user was deleted, {@code false} if not found
      */
     public Mono<Boolean> deleteUser(String id) {
+        long startTime = System.currentTimeMillis();
+        auditLogger.logMethodEntry(CLASS_NAME, "deleteUser", id);
+        
         return userRepository.existsById(id)
                 .flatMap(exists -> {
                     if (Boolean.TRUE.equals(exists)) {
@@ -155,6 +213,14 @@ public class UserService {
                     } else {
                         return Mono.just(false);
                     }
+                })
+                .doOnNext(deleted -> {
+                    if (Boolean.TRUE.equals(deleted)) {
+                        auditLogger.logUserDeleted(id);
+                    } else {
+                        auditLogger.logUserDeleteFailed(id);
+                    }
+                    auditLogger.logMethodExit(CLASS_NAME, "deleteUser", System.currentTimeMillis() - startTime);
                 });
     }
     
